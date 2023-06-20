@@ -1,0 +1,2 @@
+project
+-DCATKIN_DEVEL_PREFIX=/home/student/mobile_roboter/workspace/devel -DCMAKE_INSTALL_PREFIX=/home/student/mobile_roboter/workspace/install -G Unix Makefiles

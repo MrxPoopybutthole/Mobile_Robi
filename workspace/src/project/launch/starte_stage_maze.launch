@@ -1,0 +1,3 @@
+<launch>
+  <node name="stageros" pkg="stage_ros" type="stageros" args="$(find project)/world/maze_field_project_SS22.world"/>
+</launch>
