@@ -1,3 +1,5 @@
+% token: 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
+
 
 laser = rossubscriber('/base_scan');
 robotPos = rossubscriber('/odom');
