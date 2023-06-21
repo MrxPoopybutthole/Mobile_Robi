@@ -34,7 +34,7 @@ function [alpha] = alphahist(xy, old_alpha, k)
    end
    figure(2);
    %Histogramm plotten
-   histogram(alphas, -180:5:180);
+   histogram(alphas, 0:1:180);
    title("Histogramm der Alphas")
    xlabel("Alpha")
    ylabel("Häufigkeit")

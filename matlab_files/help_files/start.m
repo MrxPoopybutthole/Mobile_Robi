@@ -5,13 +5,13 @@ msg = rosmessage(pub);
 odom_sub = rossubscriber('/odom'); 
 odom_msg = receive(odom_sub); 
 
-k = 50;
+k = 200;
 roi_view_x = 2;
 roi_view_y = 1;
 old_alpha = 0;
 x_distance = 0.5;  % x-Abstand für den zweiten Punkt
-kp = 0.005;
-duration = 100;  
+kp = 1;
+duration = 10;  
 rate = rateControl(10);  
 
 msg.Linear.X = 0.5;
@@ -23,7 +23,7 @@ for i = 1:duration
     xy = readCartesian(scandata);
     roi = (xy(:,1) > 0 & xy(:,1) < roi_view_x) & (abs(xy(:,2)) < roi_view_y);
     found_points = xy(roi,:);
-    alpha = alphahist(found_points, old_alpha, k)
+    alpha = alphahist(xy, old_alpha, k)
     old_alpha = alpha;
     % Finden Sie die Punkte auf der linken und rechten Seite
     left_points = found_points(found_points(:,2) >= 0,:);
@@ -54,13 +54,12 @@ for i = 1:duration
 
     % Bestimmen Sie den Winkel der Mittellinie in Bezug auf die x-Achse
     desired_orientation = atan(slope);
-    odom_msg = receive(odom_sub); % Empfangen Sie eine Nachricht von 'odom'
 
-    robot_orientation = alpha;
+    robot_orientation = 0;
     
     % Bestimmen Sie den Winkel, den der Roboter drehen muss
     turn_angle = desired_orientation - robot_orientation;
-    if(abs(turn_angle )> 0.5)
+    if(abs(turn_angle )> 0.2)
          msg.Angular.Z = kp * turn_angle;
     else
         msg.Angular.Z = 0;
