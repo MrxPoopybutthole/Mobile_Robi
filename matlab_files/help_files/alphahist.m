@@ -38,4 +38,7 @@ function [alpha] = alphahist(xy, old_alpha, k)
    title("Histogramm der Alphas")
    xlabel("Alpha")
    ylabel("Häufigkeit")
+   
+   alphas = -alphas
+   
 end

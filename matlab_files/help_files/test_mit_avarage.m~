@@ -27,13 +27,12 @@ turn_counter = 1;
 robot_speed = 0.5;
 robot_width = 0.3;
 values = 1:720;
+xy_plot = [];
 k = 20;
 kp = 0.8;
 old_alpha = 0;
-lenk_toleranz = 0.055
-
-xy_plot = [];
 alpha_array = [];
+lenk_toleranz = 0.055
 
 while true
     
@@ -148,16 +147,15 @@ while true
             min_line = min(mittel_linie(:,2));
             max_line = max(mittel_linie(:,2));
             mitte = mittel_linie(:,2);
-            values = min_line:.005:max_line;
-            figure(2);
-            hist = histogram(mitte, values);
-            hold on;
             
         end
         
         
         
-        
+        values = min_line:.005:max_line;
+        figure(2);
+        hist = histogram(mitte, values);
+        hold on;
         
         
 
@@ -185,12 +183,12 @@ while true
     
         if datenImIntervall_mean < -lenk_toleranz
             vel_msg = rosmessage(robotCmd);
-            vel_msg.Angular.Z = -kp + datenImIntervall_mean;
+            vel_msg.Angular.Z = -kp;
             send(robotCmd,vel_msg);
 
         elseif datenImIntervall_mean > lenk_toleranz
             vel_msg = rosmessage(robotCmd);      
-            vel_msg.Angular.Z = kp + datenImIntervall_mean;
+            vel_msg.Angular.Z = kp;
             send(robotCmd,vel_msg);   
         end
     end

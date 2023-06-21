@@ -5,7 +5,7 @@ msg = rosmessage(pub);
 odom_sub = rossubscriber('/odom'); 
 odom_msg = receive(odom_sub); 
 
-k = 200;
+k = 20;
 roi_view_x = 2;
 roi_view_y = 1;
 old_alpha = 0;
@@ -23,7 +23,7 @@ for i = 1:duration
     xy = readCartesian(scandata);
     roi = (xy(:,1) > 0 & xy(:,1) < roi_view_x) & (abs(xy(:,2)) < roi_view_y);
     found_points = xy(roi,:);
-    alpha = alphahist(xy, old_alpha, k)
+    alpha = alphahist(found_points, old_alpha, k)
     old_alpha = alpha;
     % Finden Sie die Punkte auf der linken und rechten Seite
     left_points = found_points(found_points(:,2) >= 0,:);
