@@ -1,3 +1,5 @@
+clc;
+clear;
 
 laser = rossubscriber('/base_scan');
 robotPos = rossubscriber('/odom');
@@ -31,25 +33,18 @@ k = 20;
 kp = 0.8;
 old_alpha = 0;
 lenk_toleranz = 0.055
+x_distance = 0.5; 
 
 xy_plot = [];
 alpha_array = [];
 
+
+
 while true
     
-    
     scandata = receive(laser,10);
-    angles = linspace(scandata.AngleMin, scandata.AngleMax, numel(scandata.Ranges));
-    
-    
     ranges = scandata.Ranges;
     ranges(720);
-    
-    
-
-%     values = -0.25:.005:max(mittel_linie(:,2));
-%     figure(5);
-%     histogram(mittel_linie(:,2), values);
 
     
     vel_msg = rosmessage(robotCmd);
@@ -106,18 +101,7 @@ while true
         send(pub_inside_row, insideRowMsg);
         %pub_inside_row.publish(insideRowMsg);
         
-        xy = readCartesian(scandata);
-        
-        for i = 1:length(xy)
-            if xy(i,2) < 2 || xy(i,2) > -2
-                xy_plot = [xy_plot;xy(i,1),xy(i,2)];
-            end
-        end
-    
-%         figure();
-%         plot(xy_plot(:,1),xy_plot(:,2));
-%         
-        
+        xy = readCartesian(scandata);   
         roi = (xy(:,1) > 0 & xy(:,1) < roi_view_x) & (abs(xy(:,2)) < roi_view_y);
         found_points = xy(roi,:);
         
@@ -171,8 +155,8 @@ while true
         maxBinMittelpunkt = mitten(idx);
 
         % Berechne die Begrenzungen des Intervalls
-        intervalStart = maxBinMittelpunkt - xBreite;
-        intervalEnd = maxBinMittelpunkt + xBreite;
+        intervalStart = maxBinMittelpunkt - intervall_Breite;
+        intervalEnd = maxBinMittelpunkt + intervall_Breite;
 
         % Schneide die Daten auf das Intervall zu
         datenImIntervall = mittel_linie(mittel_linie >= intervalStart & mittel_linie <= intervalEnd);
@@ -193,6 +177,47 @@ while true
             vel_msg.Angular.Z = kp + datenImIntervall_mean;
             send(robotCmd,vel_msg);   
         end
+        
+        
+        
+        
+        left_points = found_points(found_points(:,2) >= 0,:);
+        right_points = found_points(found_points(:,2) < 0,:);
+        % Überprüfen Sie, ob links und rechts Punkte vorhanden sind
+        if isempty(left_points) || isempty(right_points)
+            continue;
+        end
+
+        % Finde den ersten Punkt und einen Punkt, der x_distance entfernt ist, auf beiden Seiten
+        [~, left_first_idx] = min(left_points(:,1));
+        [~, left_next_idx] = min(abs(left_points(:,1) - (left_points(left_first_idx,1) + x_distance)));
+
+        [~, right_first_idx] = min(right_points(:,1));
+        [~, right_next_idx] = min(abs(right_points(:,1) - (right_points(right_first_idx,1) + x_distance)));
+
+        % Überprüfen Sie, ob die oberen Punkte über dem Roboter und die unteren Punkte unter dem Roboter sind
+        if left_points(left_first_idx,2) < 0 || left_points(left_next_idx,2) < 0 || right_points(right_first_idx,2) > 0 || right_points(right_next_idx,2) > 0
+            continue;
+        end
+
+        % Berechnen Sie die Mittelpunkte der beiden Linien, die durch die Punkte verlaufen
+        mid_point1 = [(left_points(left_first_idx,1)+right_points(right_first_idx,1))/2, (left_points(left_first_idx,2)+right_points(right_first_idx,2))/2];
+        mid_point2 = [(left_points(left_next_idx,1)+right_points(right_next_idx,1))/2, (left_points(left_next_idx,2)+right_points(right_next_idx,2))/2];
+
+        figure(6);
+        plot(found_points(:,1), found_points(:,2), 'k.');
+        hold on;
+        plot(left_points(left_first_idx, 1), left_points(left_first_idx, 2), 'ro', 'LineWidth', 2, 'MarkerSize', 10);
+        plot(left_points(left_next_idx, 1), left_points(left_next_idx, 2), 'mo', 'LineWidth', 2, 'MarkerSize', 10);
+        plot(right_points(right_first_idx, 1), right_points(right_first_idx, 2), 'ro', 'LineWidth', 2, 'MarkerSize', 10);
+        plot(right_points(right_next_idx, 1), right_points(right_next_idx, 2), 'mo', 'LineWidth', 2, 'MarkerSize', 10);
+        plot([mid_point1(1), mid_point2(1)], [mid_point1(2), mid_point2(2)], 'r-');
+        hold off;   
+
+        drawnow;
+        
+        
+    
     end
         
 
