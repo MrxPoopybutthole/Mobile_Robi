@@ -1,3 +1,5 @@
+% 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
+
 laser = rossubscriber('/base_scan');
 robotPos = rossubscriber('/odom');
 
