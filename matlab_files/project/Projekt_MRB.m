@@ -1,3 +1,5 @@
+% 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
+
 laser = rossubscriber('/base_scan');
 robotPos = rossubscriber('/odom');
 
@@ -20,6 +22,7 @@ alphaMsg = rosmessage(pub_alpha);
 inside_row = rospublisher('/inside_row', 'std_msgs/Bool');
 insideRowMsg = rosmessage(inside_row);
 
+
 % Definiere die Breite, die links und rechts hinzugefügt werden soll
 intervall_Breite = 0.05; % Ändern Sie diesen Wert nach Bedarf
 roi_view_x = 2.5;
@@ -34,6 +37,7 @@ old_alpha = 0;
 lenk_toleranz = 0.055;
 mittel_linie = [];
 x_distance = 0.5; 
+alpha_array = [];
 
 while true
     
@@ -88,7 +92,7 @@ while true
         found_points = xy(roi,:);
         
         if min(ranges) < 0.2
-            vel_msg.Linear.X = robot_speed;
+            vel_msg.Linear.X = 0;
             send(cmd_vel,vel_msg);
         end
         
@@ -122,7 +126,12 @@ while true
         
         alpha = alphahist(found_points, old_alpha, k);
         old_alpha = alpha;
-
+        
+        alphaMsg.Data = alpha;
+        send(pub_alpha, alphaMsg);
+        
+        alpha_array = [alpha_array; alpha];
+        
         left_points_mask = found_points(:,2) > 0;
         mittel_linie = [found_points(:,1), found_points(:,2) - 0.375 * left_points_mask + 0.375 * ~left_points_mask];
 
@@ -149,8 +158,9 @@ while true
         patch([intervalStart intervalStart intervalEnd intervalEnd], [0 maxAnzahl maxAnzahl 0], 'r', 'FaceAlpha',0.3);
         hold off;
         
-        
-        
+        offsetMsg.Data = offset_mitte_laser;
+        send(pub_offset, offsetMsg);
+
         if offset_mitte_laser < -lenk_toleranz
             vel_msg.Linear.X = 0;
             vel_msg.Angular.Z = -kp;

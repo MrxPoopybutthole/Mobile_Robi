@@ -1,14 +1,12 @@
-function [alpha] = alphahist(xy, old_alpha)
-   k = 1;
-   
+function [alpha] = alphahist(xy, old_alpha, k)
+    
    alphas = atan2d((xy(1+k:end, 2) - xy(1:end-k, 2)), ...
        (xy(1+k:end, 1) - xy(1:end-k, 1)));
-   index = (alphas > 95) | (alphas < 85);
-   alphas = alphas(index);
-   
-   alphas = -alphas;
+    alphas = -alphas;
+   %alphas = mod(alphas + 360, 360);
+%    tolerance = 2;
+%    alphas(abs(alphas - 180) < tolerance) = 0;
    [N, edges] = histcounts(alphas, -180:5:180);
-   
    old_alpha_index = round((old_alpha+180)/5);
    shift_index = 36-old_alpha_index;
    N = circshift(N, shift_index);
@@ -34,4 +32,16 @@ function [alpha] = alphahist(xy, old_alpha)
            alpha = 180 + mod(alpha, -180);
        end
    end
+   figure(2);
+   %Histogramm plotten
+   histogram(alphas, 0:1:180);
+   title("Histogramm der Alphas")
+   xlabel("Alpha")
+   ylabel("Häufigkeit")
+   
+   alphas = -alphas;
+
+   
+   
+   
 end
