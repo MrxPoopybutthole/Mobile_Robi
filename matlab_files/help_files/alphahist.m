@@ -40,5 +40,8 @@ function [alpha] = alphahist(xy, old_alpha, k)
    ylabel("Häufigkeit")
    
    alphas = -alphas
+
+   
+   
    
 end

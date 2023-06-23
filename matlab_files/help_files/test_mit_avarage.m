@@ -5,24 +5,24 @@ laser = rossubscriber('/base_scan');
 robotPos = rossubscriber('/odom');
 
 %Fahrbefehle in Form von Geschwindigkeiten
-robotCmd = rospublisher('/cmd_vel', 'geometry_msgs/Twist');
-velMsg = rosmessage(robotCmd);
+cmd_vel = rospublisher('/cmd_vel', 'geometry_msgs/Twist');
+velMsg = rosmessage(cmd_vel);
 
 %Abstand zur Reihenmitte
-distance_row_center = rospublisher('/offset', 'std_msgs/Float64');
-distanceMsg = rosmessage(distance_row_center);
+pub_offset = rospublisher('/offset', 'std_msgs/Float64');
+offsetMsg = rosmessage(pub_offset);
 
 %Orientierung zur Reihenmitte
-orientation_row_center = rospublisher('/alpha', 'std_msgs/Float64');
-orientationMsg = rosmessage(orientation_row_center);
+pub_alpha = rospublisher('/alpha', 'std_msgs/Float64');
+alphaMsg = rosmessage(pub_alpha);
 
 %true, wenn innerhalb der Reihe
-pub_inside_row = rospublisher('/inside_row', 'std_msgs/Bool');
-insideRowMsg = rosmessage(pub_inside_row);
+inside_row = rospublisher('/inside_row', 'std_msgs/Bool');
+insideRowMsg = rosmessage(inside_row);
 
 
 % Definiere die Breite, die links und rechts hinzugefügt werden soll
-intervall_Breite = 0.09; % Ändern Sie diesen Wert nach Bedarf
+intervall_Breite = 0.05; 
 roi_view_x = 2.5;
 roi_view_y = 0.8;
 turn_counter = 1;
@@ -30,9 +30,9 @@ robot_speed = 0.5;
 robot_width = 0.3;
 values = 1:720;
 k = 20;
-kp = 0.8;
+kp = 0.7;
 old_alpha = 0;
-lenk_toleranz = 0.055
+lenk_toleranz = 0.065
 x_distance = 0.5; 
 
 xy_plot = [];
@@ -47,18 +47,18 @@ while true
     ranges(720);
 
     
-    vel_msg = rosmessage(robotCmd);
+    vel_msg = rosmessage(cmd_vel);
     vel_msg.Linear.X = robot_speed;
-    send(robotCmd,vel_msg);
+    send(cmd_vel,vel_msg);
     
    
     % check if the robot is at the end of the maze
     % make a turn if the robot is at the end
-    if min(ranges)>2
-        
+    if min(ranges)>3
+                    
         %publish that the Robot is not inside the maze 
         insideRowMsg.Data = false;
-        send(pub_inside_row, insideRowMsg);
+        send(inside_row, insideRowMsg);
         %pub_inside_row.publish(insideRowMsg);
         
         distance = 0.5;
@@ -98,7 +98,7 @@ while true
         
         %publish that the Robot is inside the maze 
         insideRowMsg.Data = true;
-        send(pub_inside_row, insideRowMsg);
+        send(inside_row, insideRowMsg);
         %pub_inside_row.publish(insideRowMsg);
         
         xy = readCartesian(scandata);   
@@ -110,6 +110,9 @@ while true
         old_alpha = alpha;
         alpha_array = [alpha_array; alpha];
         
+        %publish the orientation alpha of the robot to the mid 
+        orientationMsg.data = alpha;
+        send(pub_alpha, alphaMsg);
         
         
         points_left = [];
@@ -162,19 +165,22 @@ while true
         datenImIntervall = mittel_linie(mittel_linie >= intervalStart & mittel_linie <= intervalEnd);
 
         % Berechne den Mittelwert der Daten im Intervall
-        datenImIntervall_mean = mean(datenImIntervall)
+        offset_mitte = mean(datenImIntervall)
         patch([intervalStart intervalStart intervalEnd intervalEnd], [0 maxAnzahl maxAnzahl 0], 'r', 'FaceAlpha',0.3);
         hold off;
-            
+        
+        %publish the distance of the robot to the mid 
+        offsetMsg.Data = offset_mitte;
+        send(pub_offset, offsetMsg);
     
-        if datenImIntervall_mean < -lenk_toleranz
+        if offset_mitte < -lenk_toleranz
             vel_msg = rosmessage(robotCmd);
-            vel_msg.Angular.Z = -kp + datenImIntervall_mean;
+            vel_msg.Angular.Z = -kp + (offset_mitte*2);
             send(robotCmd,vel_msg);
 
-        elseif datenImIntervall_mean > lenk_toleranz
+        elseif offset_mitte > lenk_toleranz
             vel_msg = rosmessage(robotCmd);      
-            vel_msg.Angular.Z = kp + datenImIntervall_mean;
+            vel_msg.Angular.Z = kp + (offset_mitte*2);
             send(robotCmd,vel_msg);   
         end
         

@@ -5,24 +5,24 @@ laser = rossubscriber('/base_scan');
 robotPos = rossubscriber('/odom');
 
 %Fahrbefehle in Form von Geschwindigkeiten
-robotCmd = rospublisher('/cmd_vel', 'geometry_msgs/Twist');
-velMsg = rosmessage(robotCmd);
+cmd_vel = rospublisher('/cmd_vel', 'geometry_msgs/Twist');
+velMsg = rosmessage(cmd_vel);
 
 %Abstand zur Reihenmitte
-distance_row_center = rospublisher('/offset', 'std_msgs/Float64');
-distanceMsg = rosmessage(distance_row_center);
+offset = rospublisher('/offset', 'std_msgs/Float64');
+offsetMsg = rosmessage(offset);
 
 %Orientierung zur Reihenmitte
-orientation_row_center = rospublisher('/alpha', 'std_msgs/Float64');
-orientationMsg = rosmessage(orientation_row_center);
+alpha = rospublisher('/alpha', 'std_msgs/Float64');
+alphaMsg = rosmessage(alpha);
 
 %true, wenn innerhalb der Reihe
-pub_inside_row = rospublisher('/inside_row', 'std_msgs/Bool');
-insideRowMsg = rosmessage(pub_inside_row);
+inside_row = rospublisher('/inside_row', 'std_msgs/Bool');
+insideRowMsg = rosmessage(inside_row);
 
 
 % Definiere die Breite, die links und rechts hinzugefügt werden soll
-intervall_Breite = 0.09; % Ändern Sie diesen Wert nach Bedarf
+intervall_Breite = 0.05; 
 roi_view_x = 2.5;
 roi_view_y = 0.8;
 turn_counter = 1;
@@ -30,42 +30,37 @@ robot_speed = 0.5;
 robot_width = 0.3;
 values = 1:720;
 k = 20;
-kp = 0.8;
+kp = 0.7;
 old_alpha = 0;
-lenk_toleranz = 0.055
+lenk_toleranz = 0.065
+x_distance = 0.5; 
 
 xy_plot = [];
 alpha_array = [];
 
+
+
 while true
     
-    
     scandata = receive(laser,10);
-    angles = linspace(scandata.AngleMin, scandata.AngleMax, numel(scandata.Ranges));
-    
-    
     ranges = scandata.Ranges;
     ranges(720);
-    
-    
-
-%     values = -0.25:.005:max(mittel_linie(:,2));
-%     figure(5);
-%     histogram(mittel_linie(:,2), values);
 
     
-    vel_msg = rosmessage(robotCmd);
+    vel_msg = rosmessage(cmd_vel);
     vel_msg.Linear.X = robot_speed;
-    send(robotCmd,vel_msg);
+    send(cmd_vel,vel_msg);
     
    
     % check if the robot is at the end of the maze
     % make a turn if the robot is at the end
-    if min(ranges)>2
+    if min(ranges)>3
         
+        offset
+            
         %publish that the Robot is not inside the maze 
         insideRowMsg.Data = false;
-        send(pub_inside_row, insideRowMsg);
+        send(inside_row, insideRowMsg);
         %pub_inside_row.publish(insideRowMsg);
         
         distance = 0.5;
@@ -111,12 +106,15 @@ while true
         xy = readCartesian(scandata);   
         roi = (xy(:,1) > 0 & xy(:,1) < roi_view_x) & (abs(xy(:,2)) < roi_view_y);
         found_points = xy(roi,:);
-        Punkte_und_mitte(found_points)
+        
         
         alpha = alphahist(found_points, old_alpha, k);
         old_alpha = alpha;
         alpha_array = [alpha_array; alpha];
         
+        %publish the orientation alpha of the robot to the mid 
+        orientationMsg.data = aplha;
+        send(alpha, alphaMsg);
         
         
         points_left = [];
@@ -169,21 +167,61 @@ while true
         datenImIntervall = mittel_linie(mittel_linie >= intervalStart & mittel_linie <= intervalEnd);
 
         % Berechne den Mittelwert der Daten im Intervall
-        datenImIntervall_mean = mean(datenImIntervall)
+        offset_mitte = mean(datenImIntervall)
         patch([intervalStart intervalStart intervalEnd intervalEnd], [0 maxAnzahl maxAnzahl 0], 'r', 'FaceAlpha',0.3);
         hold off;
             
     
-        if datenImIntervall_mean < -lenk_toleranz
+        if offset_mitte < -lenk_toleranz
             vel_msg = rosmessage(robotCmd);
-            vel_msg.Angular.Z = -kp + datenImIntervall_mean;
+            vel_msg.Angular.Z = -kp + (offset_mitte*2);
             send(robotCmd,vel_msg);
 
-        elseif datenImIntervall_mean > lenk_toleranz
+        elseif offset_mitte > lenk_toleranz
             vel_msg = rosmessage(robotCmd);      
-            vel_msg.Angular.Z = kp + datenImIntervall_mean;
+            vel_msg.Angular.Z = kp + (offset_mitte*2);
             send(robotCmd,vel_msg);   
         end
+        
+        
+        
+        
+        left_points = found_points(found_points(:,2) >= 0,:);
+        right_points = found_points(found_points(:,2) < 0,:);
+        % Überprüfen Sie, ob links und rechts Punkte vorhanden sind
+        if isempty(left_points) || isempty(right_points)
+            continue;
+        end
+
+        % Finde den ersten Punkt und einen Punkt, der x_distance entfernt ist, auf beiden Seiten
+        [~, left_first_idx] = min(left_points(:,1));
+        [~, left_next_idx] = min(abs(left_points(:,1) - (left_points(left_first_idx,1) + x_distance)));
+
+        [~, right_first_idx] = min(right_points(:,1));
+        [~, right_next_idx] = min(abs(right_points(:,1) - (right_points(right_first_idx,1) + x_distance)));
+
+        % Überprüfen Sie, ob die oberen Punkte über dem Roboter und die unteren Punkte unter dem Roboter sind
+        if left_points(left_first_idx,2) < 0 || left_points(left_next_idx,2) < 0 || right_points(right_first_idx,2) > 0 || right_points(right_next_idx,2) > 0
+            continue;
+        end
+
+        % Berechnen Sie die Mittelpunkte der beiden Linien, die durch die Punkte verlaufen
+        mid_point1 = [(left_points(left_first_idx,1)+right_points(right_first_idx,1))/2, (left_points(left_first_idx,2)+right_points(right_first_idx,2))/2];
+        mid_point2 = [(left_points(left_next_idx,1)+right_points(right_next_idx,1))/2, (left_points(left_next_idx,2)+right_points(right_next_idx,2))/2];
+
+        figure(6);
+        plot(found_points(:,1), found_points(:,2), 'k.');
+        hold on;
+        plot(left_points(left_first_idx, 1), left_points(left_first_idx, 2), 'ro', 'LineWidth', 2, 'MarkerSize', 10);
+        plot(left_points(left_next_idx, 1), left_points(left_next_idx, 2), 'mo', 'LineWidth', 2, 'MarkerSize', 10);
+        plot(right_points(right_first_idx, 1), right_points(right_first_idx, 2), 'ro', 'LineWidth', 2, 'MarkerSize', 10);
+        plot(right_points(right_next_idx, 1), right_points(right_next_idx, 2), 'mo', 'LineWidth', 2, 'MarkerSize', 10);
+        plot([mid_point1(1), mid_point2(1)], [mid_point1(2), mid_point2(2)], 'r-');
+        hold off;   
+
+        drawnow;
+        
+        
     
     end
         
