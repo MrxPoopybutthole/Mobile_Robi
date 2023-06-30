@@ -24,7 +24,7 @@ insideRowMsg = rosmessage(inside_row);
 
 
 % Definiere die Breite, die links und rechts hinzugefügt werden soll
-intervall_Breite = 0.05; % Ändern Sie diesen Wert nach Bedarf
+intervall_Breite = 0.065; % Ändern Sie diesen Wert nach Bedarf
 roi_view_x = 2.5;
 roi_view_y = 0.8;
 turn_counter = 1;
@@ -32,7 +32,7 @@ robot_speed = 0.5;
 robot_width = 0.3;
 values = 1:720;
 k = 20;
-kp = 0.8;
+kp = 1.3;
 old_alpha = 0;
 lenk_toleranz = 0.055;
 mittel_linie = [];
@@ -146,6 +146,8 @@ while true
                 hold on;  
             end
         end
+        
+        
         anzahl = hist.Values;
         mitten = hist.BinEdges(1:end-1) + diff(hist.BinEdges)/2;      
         [maxAnzahl, idx] = max(anzahl);
@@ -169,7 +171,7 @@ while true
         elseif offset_mitte_laser > lenk_toleranz
             vel_msg.Linear.X = 0;
             vel_msg.Angular.Z = kp;
-            send(cmd_vel,vel_msg);   
+            send(cmd_vel,vel_msg);
         end
 
 
